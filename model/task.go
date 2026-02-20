@@ -7,9 +7,9 @@ import (
 )
 
 type Task struct {
-	Name string
-	Date time.Time
-	ID   int
+	Name string    `json:"name"`
+	Date time.Time `json:"date"`
+	ID   int       `json:"id"`
 }
 
 // func (t Task) MarshalJSON() ([]byte, error) {
