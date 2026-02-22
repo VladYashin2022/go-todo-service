@@ -3,6 +3,7 @@ package service
 import (
 	"cli_todo/model"
 	"cli_todo/storage"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -51,14 +52,28 @@ func CreateTask(s, t string) (model.Task, error) {
 }
 
 // функция для чтения отдельной задачи по ID
-func ReadTask(num int, t []model.Task) (string, error) {
+func ReadTask(id int, t []model.Task) (string, error) {
 	for _, v := range t {
-		if int(v.ID) == num {
+		if int(v.ID) == id {
 			result := stringTask(v)
 			return result, nil
 		}
 	}
 	return "", ErrNotExist
+}
+
+// функция возвращает json по id
+func FindTaskJson(id int, t []model.Task) ([]byte, error) {
+	for _, v := range t {
+		if int(v.ID) == id {
+			result, err := json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+			return result, nil
+		}
+	}
+	return nil, ErrNotExist
 }
 
 // функция для чтения всех задач
@@ -76,16 +91,19 @@ func ReadAllTasks(a []model.Task) string {
 	return result
 }
 
-//функция для внесения новых данных в задачу
+// функция для внесения новых данных в задачу
+// if choose 1 - update only name
+// if choose 2 - update only date
+// if choose 3 - updaye name and date
 func UpdateTask(choose, id int, s, d string, t *[]model.Task) error {
 	var err error
 	switch choose {
 	case 1:
-		err = updateName(id, s, t)
+		err = UpdateName(id, s, t)
 	case 2:
-		err = updateData(id, d, t)
+		err = UpdateDate(id, d, t)
 	case 3:
-		err = updateAllTask(id, s, d, t)
+		err = UpdateAllTask(id, s, d, t)
 	}
 
 	if err != nil {
@@ -95,8 +113,9 @@ func UpdateTask(choose, id int, s, d string, t *[]model.Task) error {
 	err = storage.JsonUpdate(*t) //обновляем json если нет ошибок. можно потом перенести в main
 	return err
 }
+
 // функция для обновления имени
-func updateName(id int, s string, t *[]model.Task) error {
+func UpdateName(id int, s string, t *[]model.Task) error {
 	var err error
 	for i := range *t {
 		if (*t)[i].ID == id {
@@ -110,8 +129,8 @@ func updateName(id int, s string, t *[]model.Task) error {
 	return ErrNotExist
 }
 
-//функция для обновления даты
-func updateData(id int, s string, t *[]model.Task) error {
+// функция для обновления даты
+func UpdateDate(id int, s string, t *[]model.Task) error {
 	var err error
 	for i := range *t {
 		if (*t)[i].ID == id {
@@ -125,8 +144,8 @@ func updateData(id int, s string, t *[]model.Task) error {
 	return ErrNotExist
 }
 
-//функция для обновления и имени,  и даты в задаче 
-func updateAllTask(id int, s, d string, t *[]model.Task) error {
+// функция для обновления и имени,  и даты в задаче
+func UpdateAllTask(id int, s, d string, t *[]model.Task) error {
 	var err error
 	for i := range *t {
 		if (*t)[i].ID == id {
@@ -145,7 +164,7 @@ func updateAllTask(id int, s, d string, t *[]model.Task) error {
 	return ErrNotExist
 }
 
-//функция для удаления задачи из общего среза и storage
+// функция для удаления задачи из общего среза и storage
 func DeleteTask(id int, t *[]model.Task) error {
 	for i := range *t {
 		if (*t)[i].ID == id {

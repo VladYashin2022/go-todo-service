@@ -12,25 +12,12 @@ type Task struct {
 	ID   int       `json:"id"`
 }
 
-// func (t Task) MarshalJSON() ([]byte, error) {
-// 	timeLayout := "02-01-2006 15:04"
-// 	var newDate string
-// 	newDate = t.Date.Format(timeLayout)
-
-// 	customStruct := map[string]any{
-// 		"name": t.Name,
-// 		"date": newDate,
-// 		"id":   t.ID,
-// 	}
-// 	return json.Marshal(customStruct)
-// }
-
-func ReadNameTask(s string) (string, error) { //убрать reader, перенести в main
+func ReadNameTask(s string) (string, error) {
 	taskName := strings.TrimSuffix(s, "\n")
 	return taskName, nil
 }
 
-func ReadDateTask(s string) (time.Time, error) { //убрать reader, перенести в main
+func ReadDateTask(s string) (time.Time, error) {
 	timeLayout := "02-01-2006 15:04"
 
 	s = strings.TrimSuffix(s, "\n")

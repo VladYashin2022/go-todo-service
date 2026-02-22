@@ -36,7 +36,10 @@ func JsonUpdate(t []model.Task) error {
 		return err
 	}
 	err = JsonWriter(data)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // функция для записи всех задач из файла json. вызывается в начале при каждом запуске программы
@@ -47,7 +50,7 @@ func AllTasksWriter() ([]model.Task, error) {
 	}
 
 	if len(data) == 0 {
-		return nil, nil
+		return []model.Task{}, nil
 	}
 
 	var allTasksFromJson []model.Task
