@@ -50,30 +50,30 @@ func handleGetTasks(w http.ResponseWriter, r *http.Request) {
 		//GET all
 		data, err := storage.CreateJson(service.AllTasks)
 		if err != nil {
-			http.Error(w, "json create error", http.StatusInternalServerError)
+			WriteError(w, "json create error", http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
+
+		WriteJson(w, http.StatusOK, data)
 	} else {
 		//GET by ID
 		idTask, err := strconv.Atoi(idStr)
 		if err != nil {
-			http.Error(w, "URL query conv error", http.StatusBadRequest)
+			WriteError(w, "URL query conv error", http.StatusBadRequest)
 			return
 		}
 		strTask, err := service.ReadTask(idTask, service.AllTasks)
 		if err != nil {
-			http.Error(w, "read task error", http.StatusNotFound)
+			WriteError(w, "read task error", http.StatusNotFound)
 			return
 		}
 		jsonTask, err := json.Marshal(strTask)
 		if err != nil {
-			http.Error(w, "json marshal error", http.StatusInternalServerError)
+			WriteError(w, "json marshal error", http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonTask)
+
+		WriteJson(w, http.StatusOK, jsonTask)
 	}
 }
 
@@ -82,51 +82,48 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	var req requestTask
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "json decode error", http.StatusBadRequest)
+		WriteError(w, "json decode error", http.StatusBadRequest)
 		return
 	}
 	if req.Name == "" || req.Date == "" {
-		http.Error(w, "empty parameter in request", http.StatusBadRequest)
+		WriteError(w, "empty parameter in request", http.StatusBadRequest)
 		return
 	}
 
 	task, err := service.CreateTask(req.Name, req.Date)
 	if err != nil {
-		http.Error(w, "create task error", http.StatusBadRequest)
+		WriteError(w, "create task error", http.StatusBadRequest)
 		return
 	}
 
 	jsonTask, err := json.Marshal(task)
 	if err != nil {
-		http.Error(w, "json marshal error", http.StatusInternalServerError)
+		WriteError(w, "json marshal error", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 
-	w.Write([]byte(jsonTask))
-
+	WriteJson(w, http.StatusCreated, jsonTask)
 }
 
 // DELETE
 func handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		http.Error(w, "no id", http.StatusBadRequest)
+		WriteError(w, "no id", http.StatusBadRequest)
 		return
 	} else {
 		idTask, err := strconv.Atoi(idStr)
 		if err != nil {
-			http.Error(w, "URL query conv error", http.StatusBadRequest)
+			WriteError(w, "URL query conv error", http.StatusBadRequest)
 			return
 		}
 		err = service.DeleteTask(idTask, &service.AllTasks)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			WriteError(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(http.StatusNoContent)
-		return
+
+		WriteJson(w, http.StatusNoContent, nil)
 	}
 }
 
@@ -134,53 +131,50 @@ func handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 func handlePutTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		http.Error(w, "no ID in request", http.StatusBadRequest)
+		WriteError(w, "no ID in request", http.StatusBadRequest)
 		return
 	}
 
 	idTask, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "URL query conv error", http.StatusBadRequest)
+		WriteError(w, "URL query conv error", http.StatusBadRequest)
 		return
 	}
 	//декодируем body в структуру
 	var req requestTask
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "read body error", http.StatusBadRequest)
+		WriteError(w, "read body error", http.StatusBadRequest)
 		return
 	}
 
 	if req.Name == "" || req.Date == "" {
-		http.Error(w, "Name or date in request body is empty", http.StatusBadRequest)
+		WriteError(w, "Name or date in request body is empty", http.StatusBadRequest)
 		return
 	} else {
 		err = service.UpdateAllTask(idTask, req.Name, req.Date, &service.AllTasks)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			WriteError(w, err.Error(), http.StatusNotFound)
 			return
 		}
 
 		err = storage.JsonUpdate(service.AllTasks) //обновляем json если нет ошибок
 		if err != nil {
-			http.Error(w, "update json error", http.StatusInternalServerError)
+			WriteError(w, "update json error", http.StatusInternalServerError)
 			return
 		}
 
 		updatedTaskJson, err := service.FindTaskJson(idTask, service.AllTasks)
 		if err == service.ErrNotExist {
-			http.Error(w, "Not exist", http.StatusNotFound)
+			WriteError(w, "Not exist", http.StatusNotFound)
 			return
 		}
 		if err != nil {
-			http.Error(w, "marshal error", http.StatusInternalServerError)
+			WriteError(w, "marshal error", http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(updatedTaskJson)
-
+		WriteJson(w, http.StatusOK, updatedTaskJson)
 	}
 }
 
@@ -188,34 +182,34 @@ func handlePutTask(w http.ResponseWriter, r *http.Request) {
 func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		http.Error(w, "no ID in request", http.StatusBadRequest)
+		WriteError(w, "no ID in request", http.StatusBadRequest)
 		return
 	}
 
 	idTask, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "URL query conv error", http.StatusBadRequest)
+		WriteError(w, "URL query conv error", http.StatusBadRequest)
 		return
 	}
 
 	var req patchTask
 	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "read body error", http.StatusBadRequest)
+		WriteError(w, "read body error", http.StatusBadRequest)
 		return
 	}
 
 	if req.Name == nil && req.Date == nil {
-		http.Error(w, "empty request", http.StatusBadRequest)
+		WriteError(w, "empty request", http.StatusBadRequest)
 		return
 	}
 	//validation
 	if req.Name != nil && *req.Name == "" {
-		http.Error(w, "empty field in request", http.StatusBadRequest)
+		WriteError(w, "empty field in request", http.StatusBadRequest)
 		return
 	}
 	if req.Date != nil && *req.Date == "" {
-		http.Error(w, "empty field in request", http.StatusBadRequest)
+		WriteError(w, "empty field in request", http.StatusBadRequest)
 		return
 	}
 
@@ -224,7 +218,7 @@ func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 		reqName := *req.Name
 		err = service.UpdateName(idTask, reqName, &service.AllTasks)
 		if err != nil {
-			http.Error(w, "update task error", http.StatusBadRequest)
+			WriteError(w, "update task error", http.StatusBadRequest)
 			return
 		}
 	}
@@ -233,30 +227,28 @@ func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 		reqDate := *req.Date
 		err = service.UpdateDate(idTask, reqDate, &service.AllTasks)
 		if err != nil {
-			http.Error(w, "update task error", http.StatusBadRequest)
+			WriteError(w, "update task error", http.StatusBadRequest)
 			return
 		}
 	}
 
 	err = storage.JsonUpdate(service.AllTasks) //обновляем json если нет ошибок
 	if err != nil {
-		http.Error(w, "update json error", http.StatusInternalServerError)
+		WriteError(w, "update json error", http.StatusInternalServerError)
 		return
 	}
 
 	updatedTaskJson, err := service.FindTaskJson(idTask, service.AllTasks)
 	if err == service.ErrNotExist {
-		http.Error(w, "Not exist", http.StatusNotFound)
+		WriteError(w, "Not exist", http.StatusNotFound)
 		return
 	}
 	if err != nil {
-		http.Error(w, "marshal error", http.StatusInternalServerError)
+		WriteError(w, "marshal error", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(updatedTaskJson)
+	WriteJson(w, http.StatusOK, updatedTaskJson)
 }
 
 type requestTask struct {
