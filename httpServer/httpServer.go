@@ -4,23 +4,27 @@ import (
 	"cli_todo/service"
 	"cli_todo/storage"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 )
 
 func Run(addr string) error {
 
-	//создаем router
 	mux := http.NewServeMux()
 
-	//создаем handlers
 	mux.HandleFunc("/tasks", handler)
 
-	//слушаем порт
-	err := http.ListenAndServe(addr, mux)
-
+	err := http.ListenAndServe(addr, Logging(mux))
 	return err
 
+}
+
+func Logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s,%s,%s", r.Method, r.URL.Query(), r.URL.RawQuery)
+		next.ServeHTTP(w, r)
+	})
 }
 
 // handler
@@ -48,13 +52,8 @@ func handleGetTasks(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		//GET all
-		data, err := storage.CreateJson(service.AllTasks)
-		if err != nil {
-			WriteError(w, "json create error", http.StatusInternalServerError)
-			return
-		}
-
-		WriteJson(w, http.StatusOK, data)
+		WriteJson(w, http.StatusOK, service.AllTasks)
+		return
 	} else {
 		//GET by ID
 		idTask, err := strconv.Atoi(idStr)
@@ -62,14 +61,9 @@ func handleGetTasks(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, "URL query conv error", http.StatusBadRequest)
 			return
 		}
-		strTask, err := service.ReadTask(idTask, service.AllTasks)
+		jsonTask, err := service.FindTask(idTask, service.AllTasks)
 		if err != nil {
-			WriteError(w, "read task error", http.StatusNotFound)
-			return
-		}
-		jsonTask, err := json.Marshal(strTask)
-		if err != nil {
-			WriteError(w, "json marshal error", http.StatusInternalServerError)
+			WriteError(w, "find task error", http.StatusNotFound)
 			return
 		}
 
@@ -96,13 +90,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonTask, err := json.Marshal(task)
-	if err != nil {
-		WriteError(w, "json marshal error", http.StatusInternalServerError)
-		return
-	}
-
-	WriteJson(w, http.StatusCreated, jsonTask)
+	WriteJson(w, http.StatusCreated, task)
 }
 
 // DELETE
@@ -164,13 +152,9 @@ func handlePutTask(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		updatedTaskJson, err := service.FindTaskJson(idTask, service.AllTasks)
-		if err == service.ErrNotExist {
-			WriteError(w, "Not exist", http.StatusNotFound)
-			return
-		}
+		updatedTaskJson, err := service.FindTask(idTask, service.AllTasks)
 		if err != nil {
-			WriteError(w, "marshal error", http.StatusInternalServerError)
+			WriteError(w, "Not exist", http.StatusNotFound)
 			return
 		}
 
@@ -238,13 +222,9 @@ func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTaskJson, err := service.FindTaskJson(idTask, service.AllTasks)
-	if err == service.ErrNotExist {
-		WriteError(w, "Not exist", http.StatusNotFound)
-		return
-	}
+	updatedTaskJson, err := service.FindTask(idTask, service.AllTasks)
 	if err != nil {
-		WriteError(w, "marshal error", http.StatusInternalServerError)
+		WriteError(w, "Not exist", http.StatusInternalServerError)
 		return
 	}
 

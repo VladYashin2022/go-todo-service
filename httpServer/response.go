@@ -5,20 +5,18 @@ import (
 	"net/http"
 )
 
-func WriteJson(w http.ResponseWriter, s int, v []byte) error {
+func WriteJson(w http.ResponseWriter, s int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(s)
 
 	if v == nil {
-		return nil
+		return
 	}
 
-	_, err := w.Write(v)
+	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
-		return err
+		return
 	}
-
-	return nil
 }
 
 func WriteError(w http.ResponseWriter, msg string, s int) {

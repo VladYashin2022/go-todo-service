@@ -52,14 +52,27 @@ func CreateTask(s, t string) (model.Task, error) {
 }
 
 // функция для чтения отдельной задачи по ID
-func ReadTask(id int, t []model.Task) (string, error) {
+func ReadTask(id int, t []model.Task) ([]byte, error) {
 	for _, v := range t {
 		if int(v.ID) == id {
-			result := stringTask(v)
+			result, err := json.Marshal(v.ID)
+			if err != nil {
+				return []byte{}, err
+			}
 			return result, nil
 		}
 	}
-	return "", ErrNotExist
+	return []byte{}, ErrNotExist
+}
+
+// функция ищет возвращает объект model.Task
+func FindTask(id int, t []model.Task) (model.Task, error) {
+	for _, v := range t {
+		if int(v.ID) == id {
+			return v, nil
+		}
+	}
+	return model.Task{}, ErrNotExist
 }
 
 // функция возвращает json по id
