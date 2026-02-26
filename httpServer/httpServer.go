@@ -86,7 +86,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := service.CreateTask(req.Name, req.Date)
 	if err != nil {
-		WriteError(w, "create task error", http.StatusBadRequest)
+		WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -2,6 +2,7 @@ package httpServer
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -13,7 +14,7 @@ func WriteJson(w http.ResponseWriter, s int, v any) {
 		return
 	}
 
-	err := json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(response{Data: v})
 	if err != nil {
 		return
 	}
@@ -23,14 +24,19 @@ func WriteError(w http.ResponseWriter, msg string, s int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(s)
 
-	errStruct := responseError{Error: msg, Status: s}
-	err := json.NewEncoder(w).Encode(errStruct)
+	err := json.NewEncoder(w).Encode(response{
+		Error: &apiError{Message: msg},
+	})
 	if err != nil {
-		w.Write([]byte(`{"error":"Encoder error"}`))
+		log.Panicln(err)
 	}
 }
 
-type responseError struct {
-	Error  string `json:"error"`
-	Status int    `json:"status"`
+type response struct {
+	Data  any       `json:"data,omitempty"`
+	Error *apiError `json:"error,omitempty"`
+}
+
+type apiError struct {
+	Message string `json:"message"`
 }
