@@ -1,22 +1,32 @@
 package httpServer
 
 import (
+	"cli_todo/model"
 	"cli_todo/service"
 	"cli_todo/storage"
+	"cli_todo/storage/postgres"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 )
 
-func Run(addr string) error {
+type Server struct {
+	repo *postgres.TaskRepository
+}
+
+func New(repo *postgres.TaskRepository) *Server {
+	return &Server{repo: repo}
+}
+
+func (s Server) Run(addr string) error {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/tasks", handler)
+	mux.HandleFunc("/tasks", s.handler)
 
-	err := http.ListenAndServe(addr, Logging(mux))
-	return err
+	return http.ListenAndServe(addr, Logging(mux))
 
 }
 
@@ -28,12 +38,12 @@ func Logging(next http.Handler) http.Handler {
 }
 
 // handler
-func handler(w http.ResponseWriter, r *http.Request) {
+func (s Server) handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		handleGetTasks(w, r)
+		s.handleGetTasks(w, r)
 	case http.MethodPost:
-		handleCreateTask(w, r)
+		s.handleCreateTask(w, r)
 	case http.MethodDelete:
 		handleDeleteTask(w, r)
 	case http.MethodPut:
@@ -47,7 +57,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET
-func handleGetTasks(w http.ResponseWriter, r *http.Request) {
+func (s Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -61,10 +71,14 @@ func handleGetTasks(w http.ResponseWriter, r *http.Request) {
 			WriteError(w, "URL query conv error", http.StatusBadRequest)
 			return
 		}
-		jsonTask, err := service.FindTask(idTask, service.AllTasks)
-		if err != nil {
+
+		jsonTask, err := s.repo.GetTaskByID(idTask)
+		if errors.Is(err, postgres.ErrTaskNotFound) {
 			WriteError(w, "find task error", http.StatusNotFound)
 			return
+		}
+		if err != nil {
+			WriteError(w, "get task error", http.StatusInternalServerError)
 		}
 
 		WriteJson(w, http.StatusOK, jsonTask)
@@ -72,7 +86,7 @@ func handleGetTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST
-func handleCreateTask(w http.ResponseWriter, r *http.Request) {
+func (s Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	var req requestTask
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -84,7 +98,13 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := service.CreateTask(req.Name, req.Date)
+	dateTask, err := model.ReadDateTask(req.Date)
+	if err != nil {
+		WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	task, err := s.repo.CreateTask(req.Name, dateTask)
 	if err != nil {
 		WriteError(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -5,6 +5,7 @@ import (
 	"cli_todo/httpServer"
 	"cli_todo/service"
 	"cli_todo/storage"
+	"cli_todo/storage/postgres"
 	"flag"
 	"fmt"
 	"log"
@@ -15,11 +16,20 @@ func main() {
 
 	service.TasksId = service.FindMaxID(service.AllTasks)
 
-	var httpMode = flag.Bool("http", false, "run http server")
+	var httpMode = flag.Bool("http", false, "run http server with pgsql")
 	flag.Parse()
 
+	// запуск http
 	if *httpMode {
-		err := httpServer.Run("localhost:8080")
+		db, err := postgres.InitDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+
+		repo := postgres.NewTaskRepository(db)
+		server := httpServer.New(repo)
+		err = server.Run(":8080")
 		if err != nil {
 			log.Fatal(err)
 		}
