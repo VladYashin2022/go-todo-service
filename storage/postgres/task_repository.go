@@ -23,7 +23,7 @@ func (r *TaskRepository) CreateTask(name string, date time.Time) (model.Task, er
 	err := r.db.QueryRow(
 		`INSERT INTO tasks (name, date)
 		VALUES ($1, $2)
-		RETURNING id`,
+		RETURNING id;`,
 		name,
 		date,
 	).Scan(&id) // Sсan сканирует RETURNING id
@@ -49,7 +49,7 @@ func (r *TaskRepository) GetTaskByID(id int) (model.Task, error) {
 		id,
 	).Scan(&task.ID, &task.Name, &task.Date)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return model.Task{}, ErrTaskNotFound
 	}
 
@@ -58,4 +58,35 @@ func (r *TaskRepository) GetTaskByID(id int) (model.Task, error) {
 	}
 
 	return task, nil
+}
+
+func (r *TaskRepository) GetAllTasks() ([]model.Task, error) {
+	var tasks []model.Task
+
+	rows, err := r.db.Query(
+		`SELECT id, name, date
+		FROM tasks
+		ORDER BY id;`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var task model.Task
+		err := rows.Scan(&task.ID, &task.Name, &task.Date)
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+
 }

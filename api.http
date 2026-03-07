@@ -1,0 +1,17 @@
+### create task
+POST http://localhost:8080/tasks
+Content-Type: application/json
+
+{
+    "name": "Learn Go HTTP",
+    "date": "07-03-2026 14:30"
+}
+
+### get by id
+GET http://localhost:8080/tasks?id=1
+
+### get all
+GET http://localhost:8080/tasks
+
+### check error
+GET http://localhost:8080/tasks?id=999

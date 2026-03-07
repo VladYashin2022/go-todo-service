@@ -8,7 +8,7 @@ import (
 
 // сделать создание таблицы с помощью миграции sql файлами
 func InitDB() (*sql.DB, error) {
-	connStr := "postgres://postgres:76884@localhost:5433/storage?sslmode=disable"
+	connStr := "postgres://postgres:76884@localhost:5433/postgres?sslmode=disable"
 
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {

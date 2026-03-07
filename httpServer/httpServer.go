@@ -62,7 +62,13 @@ func (s Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		//GET all
-		WriteJson(w, http.StatusOK, service.AllTasks)
+		tasks, err := s.repo.GetAllTasks()
+		if err != nil {
+			WriteError(w, "get tasks err", http.StatusInternalServerError)
+			return
+		}
+
+		WriteJson(w, http.StatusOK, tasks)
 		return
 	} else {
 		//GET by ID
@@ -79,6 +85,7 @@ func (s Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil {
 			WriteError(w, "get task error", http.StatusInternalServerError)
+			return
 		}
 
 		WriteJson(w, http.StatusOK, jsonTask)
@@ -103,7 +110,7 @@ func (s Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	log.Println(dateTask)
 	task, err := s.repo.CreateTask(req.Name, dateTask)
 	if err != nil {
 		WriteError(w, err.Error(), http.StatusInternalServerError)

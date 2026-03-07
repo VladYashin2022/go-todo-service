@@ -29,7 +29,7 @@ func main() {
 
 		repo := postgres.NewTaskRepository(db)
 		server := httpServer.New(repo)
-		err = server.Run(":8080")
+		err = server.Run("localhost:8080")
 		if err != nil {
 			log.Fatal(err)
 		}
