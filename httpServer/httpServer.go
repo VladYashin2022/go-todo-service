@@ -45,19 +45,19 @@ func (s Server) handler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreateTask(w, r)
 	case http.MethodDelete:
-		handleDeleteTask(w, r)
+		s.handleDeleteTask(w, r)
 	case http.MethodPut:
-		handlePutTask(w, r)
+		s.handlePutTask(w, r)
 	case http.MethodPatch:
 		handlePatchTask(w, r)
 	default:
-		http.Error(w, "handler", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 
 }
 
 // GET
-func (s Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -93,7 +93,7 @@ func (s Server) handleGetTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST
-func (s Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	var req requestTask
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -121,29 +121,34 @@ func (s Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // DELETE
-func handleDeleteTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		WriteError(w, "no id", http.StatusBadRequest)
 		return
-	} else {
-		idTask, err := strconv.Atoi(idStr)
-		if err != nil {
-			WriteError(w, "URL query conv error", http.StatusBadRequest)
-			return
-		}
-		err = service.DeleteTask(idTask, &service.AllTasks)
-		if err != nil {
-			WriteError(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		WriteJson(w, http.StatusNoContent, nil)
 	}
+
+	idTask, err := strconv.Atoi(idStr)
+	if err != nil {
+		WriteError(w, "URL query conv error", http.StatusBadRequest)
+		return
+	}
+
+	err = s.repo.DeleteTask(idTask)
+	if errors.Is(err, postgres.ErrTaskNotFound) {
+		WriteError(w, "task not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // PUT
-func handlePutTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePutTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		WriteError(w, "no ID in request", http.StatusBadRequest)
@@ -157,8 +162,8 @@ func handlePutTask(w http.ResponseWriter, r *http.Request) {
 	}
 	//декодируем body в структуру
 	var req requestTask
-	err = json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, "read body error", http.StatusBadRequest)
 		return
 	}
@@ -166,27 +171,25 @@ func handlePutTask(w http.ResponseWriter, r *http.Request) {
 	if req.Name == "" || req.Date == "" {
 		WriteError(w, "Name or date in request body is empty", http.StatusBadRequest)
 		return
-	} else {
-		err = service.UpdateAllTask(idTask, req.Name, req.Date, &service.AllTasks)
-		if err != nil {
-			WriteError(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		err = storage.JsonUpdate(service.AllTasks) //обновляем json если нет ошибок
-		if err != nil {
-			WriteError(w, "update json error", http.StatusInternalServerError)
-			return
-		}
-
-		updatedTaskJson, err := service.FindTask(idTask, service.AllTasks)
-		if err != nil {
-			WriteError(w, "Not exist", http.StatusNotFound)
-			return
-		}
-
-		WriteJson(w, http.StatusOK, updatedTaskJson)
 	}
+
+	//конвертируем строку в time.Time
+	date, err := model.ReadDateTask(req.Date)
+	if err != nil {
+		WriteError(w, "invalid date in request", http.StatusBadRequest)
+		return
+	}
+
+	task, err := s.repo.UpdateTask(idTask, req.Name, date)
+	if errors.Is(err, postgres.ErrTaskNotFound) {
+		WriteError(w, "task not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		WriteError(w, "task update error", http.StatusInternalServerError)
+		return
+	}
+	WriteJson(w, http.StatusOK, task)
 }
 
 // PATCH

@@ -90,3 +90,47 @@ func (r *TaskRepository) GetAllTasks() ([]model.Task, error) {
 	return tasks, nil
 
 }
+
+func (r *TaskRepository) DeleteTask(id int) error {
+	result, err := r.db.Exec(
+		`DELETE FROM tasks
+		WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return ErrTaskNotFound
+	}
+
+	return nil
+}
+
+func (r *TaskRepository) UpdateTask(id int, name string, date time.Time) (model.Task, error) {
+	var task model.Task
+
+	err := r.db.QueryRow(
+		`UPDATE tasks
+		SET name = $1, date = $2
+		WHERE id = $3
+		RETURNING id, name, date;`,
+		name,
+		date,
+		id,
+	).Scan(&task.ID, &task.Name, &task.Date)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Task{}, ErrTaskNotFound
+	}
+	if err != nil {
+		return model.Task{}, err
+	}
+
+	return task, nil
+}

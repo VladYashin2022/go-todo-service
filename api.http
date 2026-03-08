@@ -3,7 +3,7 @@ POST http://localhost:8080/tasks
 Content-Type: application/json
 
 {
-    "name": "Learn Go HTTP",
+    "name": "шашфаш",
     "date": "07-03-2026 14:30"
 }
 
@@ -15,3 +15,15 @@ GET http://localhost:8080/tasks
 
 ### check error
 GET http://localhost:8080/tasks?id=999
+
+### delete task
+DELETE http://localhost:8080/tasks?id=2
+
+### put task (upgrade all task)
+PUT http://localhost:8080/tasks?id=3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "name": "Update task test",
+    "date": "09-03-2026 14:30"
+}
