@@ -134,3 +134,32 @@ func (r *TaskRepository) UpdateTask(id int, name string, date time.Time) (model.
 
 	return task, nil
 }
+
+func (r *TaskRepository) PatchTask(
+	id int,
+	name *string,
+	date *time.Time,
+) (model.Task, error) {
+
+	var task model.Task
+
+	err := r.db.QueryRow(
+		`UPDATE tasks
+		SET name = COALESCE($1, name),
+			date = COALESCE($2, date)
+		WHERE id = $3
+		RETURNING id, name, date;`,
+		name,
+		date,
+		id,
+	).Scan(&task.ID, &task.Name, &task.Date)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Task{}, ErrTaskNotFound
+	}
+	if err != nil {
+		return model.Task{}, err
+	}
+
+	return task, nil
+}

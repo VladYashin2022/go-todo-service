@@ -3,7 +3,7 @@ POST http://localhost:8080/tasks
 Content-Type: application/json
 
 {
-    "name": "шашфаш",
+    "name": "Create Task",
     "date": "07-03-2026 14:30"
 }
 
@@ -26,4 +26,36 @@ Content-Type: application/json
 {
     "name": "Update task test",
     "date": "09-03-2026 14:30"
+}
+
+### patch task (name update)
+PATCH http://localhost:8080/tasks?id=3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "name": "PATCH task test"
+}
+
+### patch task (date update)
+PATCH http://localhost:8080/tasks?id=3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "date": "09-02-2026 12:22"
+}
+
+### patch task (err test)
+PATCH http://localhost:8080/tasks?id=3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "date": "0"
+}
+
+### patch task (err test)
+PATCH http://localhost:8080/tasks?id=3 HTTP/1.1
+Content-Type: application/json
+
+{
+    "date": ""
 }

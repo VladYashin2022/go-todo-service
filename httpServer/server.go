@@ -2,39 +2,45 @@ package httpServer
 
 import (
 	"cli_todo/model"
-	"cli_todo/service"
-	"cli_todo/storage"
 	"cli_todo/storage/postgres"
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Server struct {
-	repo *postgres.TaskRepository
+	repo       *postgres.TaskRepository
+	httpServer *http.Server
 }
 
 func New(repo *postgres.TaskRepository) *Server {
-	return &Server{repo: repo}
+	return &Server{
+		repo: repo,
+	}
 }
 
-func (s Server) Run(addr string) error {
+func (s *Server) Run(addr string) error {
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/tasks", s.handler)
 
-	return http.ListenAndServe(addr, Logging(mux))
+	s.httpServer = &http.Server{
+		Addr:    ":8080",
+		Handler: Logging(mux),
+	}
+
+	return s.httpServer.ListenAndServe()
 
 }
 
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s,%s,%s", r.Method, r.URL.Query(), r.URL.RawQuery)
-		next.ServeHTTP(w, r)
-	})
+// server shutdown func
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.httpServer.Shutdown(ctx)
 }
 
 // handler
@@ -49,7 +55,7 @@ func (s Server) handler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.handlePutTask(w, r)
 	case http.MethodPatch:
-		handlePatchTask(w, r)
+		s.handlePatchTask(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -193,7 +199,7 @@ func (s *Server) handlePutTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // PATCH
-func handlePatchTask(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePatchTask(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		WriteError(w, "no ID in request", http.StatusBadRequest)
@@ -213,11 +219,11 @@ func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validation
 	if req.Name == nil && req.Date == nil {
 		WriteError(w, "empty request", http.StatusBadRequest)
 		return
 	}
-	//validation
 	if req.Name != nil && *req.Name == "" {
 		WriteError(w, "empty field in request", http.StatusBadRequest)
 		return
@@ -227,38 +233,31 @@ func handlePatchTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//update name
-	if req.Name != nil && *req.Name != "" {
-		reqName := *req.Name
-		err = service.UpdateName(idTask, reqName, &service.AllTasks)
+	//parse date
+	var parsedDate *time.Time
+	if req.Date != nil {
+		t, err := model.ReadDateTask(*req.Date)
+
 		if err != nil {
-			WriteError(w, "update task error", http.StatusBadRequest)
+			WriteError(w, "wrong date format", http.StatusBadRequest)
 			return
 		}
-	}
-	//update date
-	if req.Date != nil && *req.Date != "" {
-		reqDate := *req.Date
-		err = service.UpdateDate(idTask, reqDate, &service.AllTasks)
-		if err != nil {
-			WriteError(w, "update task error", http.StatusBadRequest)
-			return
-		}
+
+		parsedDate = &t
 	}
 
-	err = storage.JsonUpdate(service.AllTasks) //обновляем json если нет ошибок
+	task, err := s.repo.PatchTask(idTask, req.Name, parsedDate)
+
+	if errors.Is(err, postgres.ErrTaskNotFound) {
+		WriteError(w, "task not found", http.StatusNotFound)
+		return
+	}
 	if err != nil {
-		WriteError(w, "update json error", http.StatusInternalServerError)
+		WriteError(w, "patch task error", http.StatusInternalServerError)
 		return
 	}
 
-	updatedTaskJson, err := service.FindTask(idTask, service.AllTasks)
-	if err != nil {
-		WriteError(w, "Not exist", http.StatusInternalServerError)
-		return
-	}
-
-	WriteJson(w, http.StatusOK, updatedTaskJson)
+	WriteJson(w, http.StatusOK, task)
 }
 
 type requestTask struct {

@@ -2,10 +2,8 @@ package service
 
 import (
 	"cli_todo/model"
-	"cli_todo/storage"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -43,10 +41,10 @@ func CreateTask(s, t string) (model.Task, error) {
 
 	AllTasks = append(AllTasks, task)
 
-	err = storage.JsonUpdate(AllTasks)
-	if err != nil {
-		return model.Task{}, fmt.Errorf("create task update: %w", err)
-	}
+	// err = storage.JsonUpdate(AllTasks)
+	// if err != nil {
+	// 	return model.Task{}, fmt.Errorf("create task update: %w", err)
+	// }
 
 	return task, nil
 }
@@ -123,7 +121,7 @@ func UpdateTask(choose, id int, s, d string, t *[]model.Task) error {
 		return err
 	}
 
-	err = storage.JsonUpdate(*t) //обновляем json если нет ошибок. можно потом перенести в main
+	// err = storage.JsonUpdate(*t) //обновляем json если нет ошибок. можно потом перенести в main
 	return err
 }
 
@@ -182,10 +180,10 @@ func DeleteTask(id int, t *[]model.Task) error {
 	for i := range *t {
 		if (*t)[i].ID == id {
 			(*t) = slices.Delete((*t), i, i+1)
-			err := storage.JsonUpdate(*t)
-			if err != nil {
-				return err
-			}
+			// err := storage.JsonUpdate(*t)
+			// if err != nil {
+			// 	return err
+			// }
 			return nil
 		}
 	}
