@@ -17,6 +17,7 @@ func NewTaskRepository(database *sql.DB) *TaskRepository {
 	return &TaskRepository{db: database}
 }
 
+// POST
 func (r *TaskRepository) CreateTask(name string, date time.Time) (model.Task, error) {
 	var id int
 
@@ -39,6 +40,7 @@ func (r *TaskRepository) CreateTask(name string, date time.Time) (model.Task, er
 	}, nil
 }
 
+// GET BY ID
 func (r *TaskRepository) GetTaskByID(id int) (model.Task, error) {
 	var task model.Task
 
@@ -60,6 +62,7 @@ func (r *TaskRepository) GetTaskByID(id int) (model.Task, error) {
 	return task, nil
 }
 
+// GET ALL
 func (r *TaskRepository) GetAllTasks() ([]model.Task, error) {
 	var tasks []model.Task
 
@@ -91,6 +94,7 @@ func (r *TaskRepository) GetAllTasks() ([]model.Task, error) {
 
 }
 
+// DELETE
 func (r *TaskRepository) DeleteTask(id int) error {
 	result, err := r.db.Exec(
 		`DELETE FROM tasks
@@ -113,7 +117,13 @@ func (r *TaskRepository) DeleteTask(id int) error {
 	return nil
 }
 
-func (r *TaskRepository) UpdateTask(id int, name string, date time.Time) (model.Task, error) {
+// PUT
+func (r *TaskRepository) UpdateTask(
+	id int,
+	name string,
+	date time.Time,
+) (model.Task, error) {
+
 	var task model.Task
 
 	err := r.db.QueryRow(
@@ -135,6 +145,7 @@ func (r *TaskRepository) UpdateTask(id int, name string, date time.Time) (model.
 	return task, nil
 }
 
+// PATCH
 func (r *TaskRepository) PatchTask(
 	id int,
 	name *string,

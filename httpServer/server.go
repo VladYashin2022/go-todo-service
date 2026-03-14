@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -116,7 +115,6 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println(dateTask)
 	task, err := s.repo.CreateTask(req.Name, dateTask)
 	if err != nil {
 		WriteError(w, err.Error(), http.StatusInternalServerError)
