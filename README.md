@@ -26,7 +26,7 @@ REST API для управления задачами, написанный на
 Сначала клонируйте репозиторий:
 
 ```bash
-git clone https://github.com/VladYashin2022/go-todo-service
+git clone https://github.com/VladYashin2022/go-todo-service.git
 cd go-todo-service
 ```
 
