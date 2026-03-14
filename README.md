@@ -99,3 +99,18 @@ curl -X PATCH "http://localhost:8080/tasks?id=1" \
 ```bash
 curl -X DELETE "http://localhost:8080/tasks?id=1"
 ```
+
+## Структура проекта
+
+go-todo-service
+│
+├── httpServer       # HTTP server and handlers
+├── model            # domain models
+├── service          # business logic
+├── storage
+│   └── postgres     # PostgreSQL repository
+│
+├── docker-compose.yml
+├── Dockerfile
+├── init.sql
+├── main.go
